@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — InsightCart AI</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .checkout-layout { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; padding: 32px 0 80px; }
+    .checkout-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+    .checkout-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .card-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .order-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
+    .order-item:last-child { border-bottom: none; }
+    .order-item-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: var(--text-2); }
+    .summary-total { display: flex; justify-content: space-between; font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--cream); padding-top: 12px; border-top: 1px solid var(--border); }
+    .step-indicator { display: flex; gap: 4px; margin-bottom: 28px; }
+    .step { flex: 1; height: 3px; border-radius: 2px; background: var(--border); }
+    .step.active { background: var(--copper); }
+    .step.done { background: var(--success); }
+    @media (max-width: 768px) { .checkout-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-brand-icon">🛒</div>
+      <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+    </a>
+    <div class="nav-actions">
+      <div id="nav-guest" style="display:none"></div>
+      <div id="nav-authed" style="display:none; align-items:center; gap:12px;">
+        <span id="nav-user-name" style="font-size:13px; color:var(--text-2)"></span>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container page-content">
+  <div class="step-indicator">
+    <div class="step done"></div>
+    <div class="step done"></div>
+    <div class="step active"></div>
+  </div>
+
+  <h1 style="font-family:var(--font-display); font-size:2rem; margin-bottom:24px;">Checkout</h1>
+
+  <div class="checkout-layout">
+    <div>
+      <!-- Shipping -->
+      <div class="checkout-section">
+        <div class="checkout-section-title">📦 Shipping Address</div>
+        <div class="form-group">
+          <label class="form-label">Street Address</label>
+          <input type="text" id="street" class="form-input" placeholder="123 Main Street">
+        </div>
+        <div class="card-input-row">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="city" class="form-input" placeholder="New York">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" id="state" class="form-input" placeholder="NY">
+          </div>
+        </div>
+        <div class="card-input-row">
+          <div class="form-group">
+            <label class="form-label">ZIP Code</label>
+            <input type="text" id="zip" class="form-input" placeholder="10001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <input type="text" id="country" class="form-input" value="United States">
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="checkout-section">
+        <div class="checkout-section-title">💳 Payment Details
+          <span class="badge badge-success" style="font-size:10px; margin-left:auto;">🔒 Simulated</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Card Number</label>
+          <input type="text" id="card-number" class="form-input" placeholder="4111 1111 1111 1111" maxlength="19"
+            oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Card Holder</label>
+          <input type="text" id="card-holder" class="form-input" placeholder="Jane Smith">
+        </div>
+        <div class="card-input-row">
+          <div class="form-group">
+            <label class="form-label">Expiry</label>
+            <input type="text" id="expiry" class="form-input" placeholder="MM/YY" maxlength="5"
+              oninput="if(this.value.length===2&&!this.value.includes('/'))this.value+='/'">
+          </div>
+          <div class="form-group">
+            <label class="form-label">CVV</label>
+            <input type="text" id="cvv" class="form-input" placeholder="123" maxlength="4">
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--text-3); margin-top:-8px;">
+          💡 Use any 13-19 digit card number for simulation. Payments succeed 95% of the time.
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Summary Sidebar -->
+    <div>
+      <div class="checkout-section" style="margin-bottom:0;">
+        <h3 style="font-size:1rem; font-weight:600; margin-bottom:16px;">Order Summary</h3>
+        <div id="order-items-list"></div>
+        <div style="margin-top:16px;">
+          <div class="summary-row"><span>Subtotal</span><span id="chk-subtotal">—</span></div>
+          <div class="summary-row"><span>Tax (8%)</span><span id="chk-tax">—</span></div>
+          <div class="summary-row"><span>Shipping</span><span style="color:var(--success)">Free</span></div>
+          <div class="summary-total"><span>Total</span><span id="chk-total">—</span></div>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" id="place-order-btn" onclick="placeOrder()">
+          Place Order & Pay
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div id="success-modal" class="modal-overlay" style="display:none;">
+  <div class="modal" style="text-align:center;">
+    <div class="modal-body" style="padding: 48px 32px;">
+      <div style="font-size:56px; margin-bottom:16px;">🎉</div>
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:8px; color:var(--cream);">Order Placed!</h2>
+      <p style="color:var(--text-2); margin-bottom:8px;">Payment successful. Your order is being processed.</p>
+      <p id="order-ref" style="font-family:var(--font-mono); font-size:12px; color:var(--copper); margin-bottom:32px;"></p>
+      <a href="/orders.html" class="btn btn-primary btn-lg">View My Orders</a>
+      <a href="/index.html" class="btn btn-ghost" style="margin-left:8px;">Continue Shopping</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/tracker.js"></script>
+<script src="/js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) window.location.href = '/login.html?redirect=/checkout.html';
+
+let cartItems = [], orderId = null;
+
+async function loadCartForCheckout() {
+  try {
+    const { items, cartTotal } = await api.get('/cart');
+    if (!items.length) { window.location.href = '/cart.html'; return; }
+    cartItems = items;
+
+    const list = document.getElementById('order-items-list');
+    list.innerHTML = '';
+    items.forEach(item => {
+      const p = item.productId;
+      if (!p) return;
+      list.innerHTML += `
+        <div class="order-item">
+          <img class="order-item-img" src="${p.imageUrl}" onerror="this.src='https://via.placeholder.com/50'">
+          <div style="flex:1; font-size:13px;">
+            <div style="font-weight:500;">${p.name}</div>
+            <div style="color:var(--text-3);">Qty: ${item.quantity}</div>
+          </div>
+          <div style="font-weight:600;">${fmt.currency(p.price * item.quantity)}</div>
+        </div>`;
+    });
+
+    const tax = cartTotal * 0.08;
+    document.getElementById('chk-subtotal').textContent = fmt.currency(cartTotal);
+    document.getElementById('chk-tax').textContent      = fmt.currency(tax);
+    document.getElementById('chk-total').textContent    = fmt.currency(cartTotal + tax);
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function placeOrder() {
+  const btn = document.getElementById('place-order-btn');
+  btn.textContent = 'Processing...';
+  btn.disabled = true;
+
+  try {
+    // 1. Create order
+    const { order } = await api.post('/orders', {
+      shippingAddress: {
+        street: document.getElementById('street').value,
+        city:   document.getElementById('city').value,
+        state:  document.getElementById('state').value,
+        zip:    document.getElementById('zip').value,
+        country: document.getElementById('country').value,
+      }
+    });
+
+    orderId = order._id;
+
+    // 2. Process payment
+    const { paymentRef } = await api.post('/payments/process', {
+      orderId,
+      cardNumber: document.getElementById('card-number').value,
+      expiryDate: document.getElementById('expiry').value,
+      cvv:        document.getElementById('cvv').value,
+      cardHolder: document.getElementById('card-holder').value,
+    });
+
+    // 3. Track purchase events for each item
+    cartItems.forEach(item => {
+      if (item.productId) {
+        Tracker.track('purchase', {
+          productId: item.productId._id,
+          category: item.productId.category,
+          metadata: { orderId, quantity: item.quantity, price: item.productId.price }
+        });
+      }
+    });
+
+    // Show success
+    document.getElementById('order-ref').textContent = `Payment Ref: ${paymentRef}`;
+    document.getElementById('success-modal').style.display = 'flex';
+    updateCartBadge();
+
+  } catch (err) {
+    showToast(err.message, 'error');
+    btn.textContent = 'Place Order & Pay';
+    btn.disabled = false;
+  }
+}
+
+loadCartForCheckout();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InsightCart AI — Smart Shopping</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-brand-icon">🛒</div>
+      <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="/index.html" class="active">Home</a></li>
+      <li><a href="/catalog.html">Catalog</a></li>
+      <li><a href="/orders.html">Orders</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <!-- Guest actions -->
+      <div id="nav-guest" style="display:none; gap:8px;">
+        <a href="/login.html" class="btn btn-ghost btn-sm">Sign In</a>
+        <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+      </div>
+
+      <!-- Authenticated actions -->
+      <div id="nav-authed" style="display:none; align-items:center; gap:12px;">
+        <a id="nav-admin-link" href="/admin/dashboard.html" class="btn btn-outline btn-sm" style="display:none">
+          ⚙️ Admin
+        </a>
+        <a href="/cart.html" class="cart-badge">
+          🛒 <span id="nav-user-name"></span>
+          <span class="cart-count" style="display:none">0</span>
+        </a>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div id="hero-greeting" class="hero-greeting">Welcome to InsightCart AI</div>
+    <h1 id="hero-title" class="hero-title">Discover What You'll<br>Love Next</h1>
+    <p class="hero-subtitle" id="hero-subtitle">
+      Our AI analyzes your preferences in real-time to surface products you'll actually want.
+    </p>
+
+    <div class="search-bar" style="margin-bottom: 40px;">
+      <input type="text" id="search-input" placeholder="Search products, categories, brands..." />
+      <button onclick="doSearch()">🔍</button>
+    </div>
+
+    <!-- Category quick-filters -->
+    <div id="category-chips" class="filter-bar"></div>
+  </div>
+</section>
+
+<!-- ── Main Content ──────────────────────────────────────────────────────── -->
+<main class="page-content">
+  <div class="container">
+
+    <!-- Personalized Recommendations -->
+    <section style="margin-bottom: 60px;">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow" id="recs-eyebrow">AI Picks For You</div>
+          <div class="section-title" id="recs-title">Recommended Products</div>
+        </div>
+        <a href="/catalog.html" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      <div class="product-grid" id="recommendations-grid">
+        <!-- Skeleton loaders -->
+        ${[...Array(4)].fill('<div class="product-card skeleton" style="height:360px"></div>').join('')}
+      </div>
+    </section>
+
+    <!-- Trending Now -->
+    <section style="margin-bottom: 60px;">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">🔥 Hot Right Now</div>
+          <div class="section-title">Trending Products</div>
+        </div>
+        <a href="/catalog.html?sort=trendScore" class="btn btn-ghost btn-sm">See All →</a>
+      </div>
+      <div class="product-grid" id="trending-grid">
+        ${[...Array(4)].fill('<div class="product-card skeleton" style="height:360px"></div>').join('')}
+      </div>
+    </section>
+
+    <!-- Category Spotlight -->
+    <section style="margin-bottom: 60px;">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Browse By Category</div>
+          <div class="section-title">Shop Categories</div>
+        </div>
+      </div>
+      <div id="category-cards" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:16px;"></div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="nav-brand" style="margin-bottom:12px;">
+          <div class="nav-brand-icon">🛒</div>
+          <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+        </div>
+        <p class="footer-brand-desc">
+          AI-powered shopping that learns what you love and discovers what you'll want next.
+        </p>
+      </div>
+      <div>
+        <div class="footer-heading">Shop</div>
+        <ul class="footer-links">
+          <li><a href="/catalog.html">All Products</a></li>
+          <li><a href="/catalog.html?sort=trendScore">Trending</a></li>
+          <li><a href="/orders.html">My Orders</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-heading">Account</div>
+        <ul class="footer-links">
+          <li><a href="/login.html">Sign In</a></li>
+          <li><a href="/register.html">Register</a></li>
+          <li><a href="/cart.html">Cart</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-heading">InsightCart</div>
+        <ul class="footer-links">
+          <li><a href="#">About AI Engine</a></li>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Support</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 InsightCart AI. All rights reserved.</span>
+      <span style="color:var(--copper)">🧠 Powered by Behavior Intelligence Engine</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/tracker.js"></script>
+<script src="/js/app.js"></script>
+<script>
+// ── Homepage Logic ─────────────────────────────────────────────────────────────
+
+const CATEGORY_EMOJIS = {
+  'Electronics': '💻', 'Clothing': '👕', 'Books': '📚',
+  'Home & Kitchen': '🏠', 'Sports & Fitness': '🏋️', 'Beauty': '✨',
+  'default': '🛍️'
+};
+
+async function initHomepage() {
+  personalizeHero();
+  await Promise.all([
+    loadRecommendations(),
+    loadTrending(),
+    loadCategories(),
+  ]);
+}
+
+function personalizeHero() {
+  const user = Auth.getUser();
+  if (!user) return;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  document.getElementById('hero-greeting').textContent = `${greeting}, ${user.name.split(' ')[0]}!`;
+  document.getElementById('hero-title').innerHTML = `Your Personalized<br>Shopping Feed`;
+  document.getElementById('hero-subtitle').textContent =
+    'Based on your browsing history, we\'ve curated products you\'ll love.';
+  document.getElementById('recs-eyebrow').textContent = '🧠 AI Picks For You';
+  document.getElementById('recs-title').textContent = 'Recommended Just for You';
+}
+
+async function loadRecommendations() {
+  const grid = document.getElementById('recommendations-grid');
+  try {
+    const { recommendations, personalized } = await api.get('/recommendations?limit=8');
+    grid.innerHTML = '';
+
+    if (!recommendations.length) {
+      grid.innerHTML = '<p style="color:var(--text-2); grid-column:1/-1">No recommendations yet. Start browsing!</p>';
+      return;
+    }
+
+    recommendations.forEach(product => {
+      grid.appendChild(buildProductCard(product, { showReason: personalized }));
+    });
+  } catch (err) {
+    grid.innerHTML = `<p style="color:var(--error); grid-column:1/-1">${err.message}</p>`;
+  }
+}
+
+async function loadTrending() {
+  const grid = document.getElementById('trending-grid');
+  try {
+    const { products } = await api.get('/products/trending');
+    grid.innerHTML = '';
+    products.slice(0, 8).forEach(product => {
+      grid.appendChild(buildProductCard(product, { showReason: false }));
+    });
+  } catch (err) {
+    grid.innerHTML = '';
+  }
+}
+
+async function loadCategories() {
+  try {
+    const { categories } = await api.get('/products/categories');
+    const chips = document.getElementById('category-chips');
+    const cards = document.getElementById('category-cards');
+    chips.innerHTML = '';
+    cards.innerHTML = '';
+
+    categories.forEach(cat => {
+      const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default;
+
+      // Chip filter
+      const chip = document.createElement('div');
+      chip.className = 'filter-chip';
+      chip.textContent = `${emoji} ${cat}`;
+      chip.addEventListener('click', () => window.location.href = `/catalog.html?category=${encodeURIComponent(cat)}`);
+      chips.appendChild(chip);
+
+      // Category card
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.cssText = 'cursor:pointer; text-align:center; padding:24px 16px;';
+      card.innerHTML = `
+        <div style="font-size:32px; margin-bottom:8px;">${emoji}</div>
+        <div style="font-weight:600; font-size:14px;">${cat}</div>
+      `;
+      card.addEventListener('click', () => window.location.href = `/catalog.html?category=${encodeURIComponent(cat)}`);
+      cards.appendChild(card);
+    });
+  } catch (_) {}
+}
+
+function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  Tracker.track('search', { query: q });
+  window.location.href = `/catalog.html?q=${encodeURIComponent(q)}`;
+}
+
+document.getElementById('search-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+Tracker.observeSearch(document.getElementById('search-input'));
+
+// Start
+initHomepage();
+</script>
+</body>
+</html>

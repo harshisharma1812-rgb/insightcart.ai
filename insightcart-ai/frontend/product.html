@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product — InsightCart AI</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .product-detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; padding: 40px 0 80px; align-items: start; }
+    .product-image-main { aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+    .product-image-main img { width: 100%; height: 100%; object-fit: cover; }
+    .product-detail-brand { font-size: 12px; font-weight: 700; color: var(--copper); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .product-detail-name { font-family: var(--font-display); font-size: 2.2rem; color: var(--cream); line-height: 1.2; margin-bottom: 12px; }
+    .product-detail-price { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--cream); margin-bottom: 20px; }
+    .product-detail-desc { color: var(--text-2); line-height: 1.8; font-size: 15px; margin-bottom: 24px; }
+    .product-actions { display: flex; gap: 12px; margin-bottom: 28px; }
+    .meta-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-label { color: var(--text-3); }
+    .meta-value { color: var(--text); font-weight: 500; }
+    .related-section { margin-top: 60px; }
+    @media (max-width: 768px) { .product-detail-layout { grid-template-columns: 1fr; gap: 24px; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-brand-icon">🛒</div>
+      <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/catalog.html">Catalog</a></li>
+      <li><a href="/orders.html">Orders</a></li>
+    </ul>
+    <div class="nav-actions">
+      <div id="nav-guest" style="display:none; gap:8px;">
+        <a href="/login.html" class="btn btn-ghost btn-sm">Sign In</a>
+        <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+      </div>
+      <div id="nav-authed" style="display:none; align-items:center; gap:12px;">
+        <a id="nav-admin-link" href="/admin/dashboard.html" class="btn btn-outline btn-sm" style="display:none">⚙️ Admin</a>
+        <a href="/cart.html" class="cart-badge">🛒 <span id="nav-user-name"></span><span class="cart-count" style="display:none">0</span></a>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container page-content">
+  <!-- Breadcrumb -->
+  <div style="padding: 16px 0; font-size: 13px; color: var(--text-3);">
+    <a href="/index.html" style="color:var(--text-3);">Home</a>
+    <span style="margin: 0 8px;">›</span>
+    <a href="/catalog.html" style="color:var(--text-3);">Catalog</a>
+    <span style="margin: 0 8px;">›</span>
+    <span id="breadcrumb-name" style="color:var(--text-2);">Loading...</span>
+  </div>
+
+  <!-- Loading skeleton -->
+  <div id="product-skeleton" class="product-detail-layout">
+    <div class="skeleton" style="aspect-ratio:4/3; border-radius:var(--radius-lg);"></div>
+    <div>
+      <div class="skeleton" style="height:16px; width:80px; margin-bottom:12px;"></div>
+      <div class="skeleton" style="height:48px; margin-bottom:12px;"></div>
+      <div class="skeleton" style="height:32px; width:120px; margin-bottom:20px;"></div>
+      <div class="skeleton" style="height:100px; margin-bottom:20px;"></div>
+      <div class="skeleton" style="height:48px;"></div>
+    </div>
+  </div>
+
+  <!-- Product Detail -->
+  <div id="product-detail" class="product-detail-layout" style="display:none;">
+    <div>
+      <div class="product-image-main">
+        <img id="p-image" src="" alt="">
+      </div>
+      <!-- Stat chips -->
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <span class="badge badge-neutral" id="p-views-badge">👁 — views</span>
+        <span class="badge badge-neutral" id="p-cart-badge">🛒 — added to cart</span>
+        <span class="badge badge-copper" id="p-purchase-badge">✅ — purchased</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="product-detail-brand" id="p-brand"></div>
+      <h1 class="product-detail-name" id="p-name"></h1>
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <div class="stars" id="p-stars" style="font-size:18px;"></div>
+        <span style="font-size:13px; color:var(--text-2);" id="p-review-count"></span>
+        <span class="badge badge-copper" id="p-category-badge"></span>
+      </div>
+
+      <div class="product-detail-price" id="p-price"></div>
+      <p class="product-detail-desc" id="p-desc"></p>
+
+      <!-- Tags -->
+      <div id="p-tags" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:24px;"></div>
+
+      <!-- Quantity + Actions -->
+      <div style="margin-bottom:20px;">
+        <label class="form-label">Quantity</label>
+        <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <span class="qty-val" id="qty-display">1</span>
+            <button class="qty-btn" onclick="changeQty(1)">+</button>
+          </div>
+          <span id="p-stock-label" style="font-size:13px; color:var(--text-3);"></span>
+        </div>
+      </div>
+
+      <div class="product-actions">
+        <button class="btn btn-primary btn-lg" id="add-cart-btn" onclick="addThisToCart()">
+          🛒 Add to Cart
+        </button>
+        <button class="btn btn-secondary btn-lg" onclick="buyNow()">
+          Buy Now →
+        </button>
+      </div>
+
+      <!-- Product Meta -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
+        <div class="meta-row"><span class="meta-label">Brand</span><span class="meta-value" id="m-brand">—</span></div>
+        <div class="meta-row"><span class="meta-label">Category</span><span class="meta-value" id="m-category">—</span></div>
+        <div class="meta-row"><span class="meta-label">Stock</span><span class="meta-value" id="m-stock">—</span></div>
+        <div class="meta-row"><span class="meta-label">Trend Score</span><span class="meta-value" id="m-trend">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Related Products -->
+  <div class="related-section">
+    <div class="section-header">
+      <div>
+        <div class="section-eyebrow">You Might Also Like</div>
+        <div class="section-title">Related Products</div>
+      </div>
+    </div>
+    <div class="product-grid" id="related-grid"></div>
+  </div>
+</div>
+
+<script src="/js/tracker.js"></script>
+<script src="/js/app.js"></script>
+<script>
+const productId = new URLSearchParams(window.location.search).get('id');
+let currentProduct = null;
+let qty = 1;
+let dwellStart = Date.now();
+
+if (!productId) window.location.href = '/catalog.html';
+
+function changeQty(delta) {
+  if (!currentProduct) return;
+  qty = Math.max(1, Math.min(qty + delta, currentProduct.stock));
+  document.getElementById('qty-display').textContent = qty;
+}
+
+async function loadProduct() {
+  try {
+    const { product } = await api.get(`/products/${productId}`);
+    currentProduct = product;
+    renderProduct(product);
+
+    // Track view event
+    Tracker.track('view', {
+      productId: product._id,
+      category: product.category,
+      metadata: { price: product.price }
+    });
+
+    // Load related products from same category
+    loadRelated(product.category, product._id);
+  } catch (err) {
+    showToast('Product not found', 'error');
+    setTimeout(() => window.location.href = '/catalog.html', 1500);
+  }
+}
+
+function renderProduct(p) {
+  document.title = `${p.name} — InsightCart AI`;
+  document.getElementById('breadcrumb-name').textContent = p.name;
+  document.getElementById('product-skeleton').style.display = 'none';
+  document.getElementById('product-detail').style.display  = 'grid';
+
+  document.getElementById('p-image').src  = p.imageUrl || 'https://via.placeholder.com/600x450';
+  document.getElementById('p-image').alt  = p.name;
+  document.getElementById('p-brand').textContent       = p.brand || '';
+  document.getElementById('p-name').textContent        = p.name;
+  document.getElementById('p-price').textContent       = fmt.currency(p.price);
+  document.getElementById('p-desc').textContent        = p.description;
+  document.getElementById('p-stars').textContent       = renderStars(p.rating || 0);
+  document.getElementById('p-review-count').textContent= `${fmt.number(p.reviewCount || 0)} reviews`;
+  document.getElementById('p-category-badge').textContent = p.category;
+  document.getElementById('p-stock-label').textContent =
+    p.stock === 0 ? 'Out of stock' : p.stock < 10 ? `Only ${p.stock} left!` : `${p.stock} in stock`;
+  document.getElementById('p-stock-label').style.color =
+    p.stock === 0 ? 'var(--error)' : p.stock < 10 ? 'var(--warning)' : 'var(--text-3)';
+
+  // Stats badges
+  document.getElementById('p-views-badge').textContent    = `👁 ${fmt.number(p.viewCount || 0)} views`;
+  document.getElementById('p-cart-badge').textContent     = `🛒 ${fmt.number(p.cartAddCount || 0)} carted`;
+  document.getElementById('p-purchase-badge').textContent = `✅ ${fmt.number(p.purchaseCount || 0)} sold`;
+
+  // Trending badge
+  if (p.trendScore > 80) {
+    const badge = document.createElement('span');
+    badge.className = 'badge badge-warning';
+    badge.textContent = '🔥 Trending';
+    document.getElementById('p-stars').parentElement.appendChild(badge);
+  }
+
+  // Tags
+  const tagsEl = document.getElementById('p-tags');
+  (p.tags || []).forEach(tag => {
+    const t = document.createElement('span');
+    t.className = 'filter-chip';
+    t.style.fontSize = '12px';
+    t.textContent = '#' + tag;
+    tagsEl.appendChild(t);
+  });
+
+  // Meta
+  document.getElementById('m-brand').textContent    = p.brand || '—';
+  document.getElementById('m-category').textContent = p.category;
+  document.getElementById('m-stock').textContent    = p.stock;
+  document.getElementById('m-trend').textContent    = `${p.trendScore?.toFixed(1) || 0} pts`;
+
+  // Disable add to cart if out of stock
+  if (p.stock === 0) {
+    document.getElementById('add-cart-btn').disabled = true;
+    document.getElementById('add-cart-btn').textContent = 'Out of Stock';
+  }
+}
+
+async function addThisToCart() {
+  if (!currentProduct) return;
+  await addToCart(currentProduct._id, currentProduct.name);
+  // Track add_to_cart with category for behavior engine
+  Tracker.track('add_to_cart', {
+    productId: currentProduct._id,
+    category: currentProduct.category,
+    metadata: { qty, price: currentProduct.price }
+  });
+}
+
+async function buyNow() {
+  await addThisToCart();
+  setTimeout(() => window.location.href = '/cart.html', 600);
+}
+
+async function loadRelated(category, excludeId) {
+  const grid = document.getElementById('related-grid');
+  try {
+    const { products } = await api.get(`/products?category=${encodeURIComponent(category)}&limit=4`);
+    const filtered = products.filter(p => p._id !== excludeId).slice(0, 4);
+    grid.innerHTML = '';
+    filtered.forEach(p => grid.appendChild(buildProductCard(p, { showReason: false })));
+  } catch (_) { grid.innerHTML = ''; }
+}
+
+// Track dwell on unload
+window.addEventListener('beforeunload', () => {
+  if (currentProduct) {
+    Tracker.track('dwell', {
+      productId: currentProduct._id,
+      category: currentProduct.category,
+      dwellMs: Date.now() - dwellStart
+    });
+  }
+});
+
+loadProduct();
+</script>
+</body>
+</html>

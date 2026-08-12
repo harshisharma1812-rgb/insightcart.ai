@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catalog — InsightCart AI</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .catalog-layout { display: grid; grid-template-columns: 220px 1fr; gap: 32px; margin-top: 32px; }
+    .sidebar-filters { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; height: fit-content; position: sticky; top: calc(var(--nav-h) + 16px); }
+    .filter-section { margin-bottom: 24px; }
+    .filter-section:last-child { margin-bottom: 0; }
+    .filter-section-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+    .price-inputs { display: flex; gap: 8px; align-items: center; }
+    .price-inputs input { flex: 1; }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .results-count { font-size: 13px; color: var(--text-2); }
+    @media (max-width: 768px) { .catalog-layout { grid-template-columns: 1fr; } .sidebar-filters { display: none; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-brand-icon">🛒</div>
+      <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/catalog.html" class="active">Catalog</a></li>
+      <li><a href="/orders.html">Orders</a></li>
+    </ul>
+    <div class="nav-actions">
+      <div id="nav-guest" style="display:none; gap:8px;">
+        <a href="/login.html" class="btn btn-ghost btn-sm">Sign In</a>
+        <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+      </div>
+      <div id="nav-authed" style="display:none; align-items:center; gap:12px;">
+        <a id="nav-admin-link" href="/admin/dashboard.html" class="btn btn-outline btn-sm" style="display:none">⚙️ Admin</a>
+        <a href="/cart.html" class="cart-badge">🛒 <span id="nav-user-name"></span><span class="cart-count" style="display:none">0</span></a>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container page-content">
+  <div style="padding: 24px 0 0;">
+    <h1 style="font-family:var(--font-display); font-size:2rem; margin-bottom:8px;">Product Catalog</h1>
+    <div class="search-bar" style="max-width: 100%; margin-bottom:0;">
+      <input type="text" id="search-input" placeholder="Search products..." />
+      <button onclick="applyFilters()">🔍</button>
+    </div>
+  </div>
+
+  <div class="catalog-layout">
+    <!-- Sidebar Filters -->
+    <aside class="sidebar-filters">
+      <div class="filter-section">
+        <div class="filter-section-title">Category</div>
+        <div id="category-filter-list"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title">Price Range</div>
+        <div class="price-inputs">
+          <input type="number" id="min-price" class="form-input" placeholder="Min" min="0">
+          <span style="color:var(--text-3)">—</span>
+          <input type="number" id="max-price" class="form-input" placeholder="Max" min="0">
+        </div>
+        <button class="btn btn-secondary btn-sm btn-block" style="margin-top:10px;" onclick="applyFilters()">Apply</button>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-section-title">Sort By</div>
+        <select id="sort-by" class="form-input" onchange="applyFilters()">
+          <option value="trendScore">Trending</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="rating">Top Rated</option>
+          <option value="createdAt">Newest</option>
+        </select>
+      </div>
+
+      <button class="btn btn-ghost btn-sm btn-block" onclick="clearFilters()">Clear All Filters</button>
+    </aside>
+
+    <!-- Product Grid -->
+    <div>
+      <div class="results-header">
+        <div class="results-count" id="results-count">Loading products...</div>
+        <div class="filter-bar" id="active-filter-tags" style="margin:0;"></div>
+      </div>
+      <div class="product-grid" id="product-grid">
+        ${[...Array(8)].fill('<div class="product-card skeleton" style="height:360px"></div>').join('')}
+      </div>
+      <!-- Pagination -->
+      <div id="pagination" style="display:flex; justify-content:center; gap:8px; margin-top:32px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/tracker.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let currentPage = 1;
+let activeCategory = null;
+const params = new URLSearchParams(window.location.search);
+
+async function loadProducts() {
+  const grid = document.getElementById('product-grid');
+  const sortVal = document.getElementById('sort-by').value;
+  const [sort, order] = sortVal.includes('-') ? sortVal.split('-') : [sortVal, 'desc'];
+
+  const qs = new URLSearchParams({
+    page: currentPage,
+    limit: 20,
+    sort,
+    order,
+  });
+
+  const q = document.getElementById('search-input').value.trim();
+  if (q) qs.set('q', q);
+
+  if (activeCategory) qs.set('category', activeCategory);
+
+  const minP = document.getElementById('min-price').value;
+  const maxP = document.getElementById('max-price').value;
+  if (minP) qs.set('minPrice', minP);
+  if (maxP) qs.set('maxPrice', maxP);
+
+  grid.innerHTML = Array(8).fill('<div class="product-card skeleton" style="height:360px"></div>').join('');
+
+  try {
+    const { products, pagination } = await api.get(`/products?${qs}`);
+    grid.innerHTML = '';
+
+    document.getElementById('results-count').textContent =
+      `${pagination.total} products found`;
+
+    if (!products.length) {
+      grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-state-icon">🔍</div>
+          <div class="empty-state-title">No products found</div>
+          <div class="empty-state-text">Try adjusting your search or filters</div>
+          <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+        </div>`;
+      return;
+    }
+
+    products.forEach(product => {
+      grid.appendChild(buildProductCard(product, { showReason: false }));
+    });
+
+    renderPagination(pagination);
+  } catch (err) {
+    grid.innerHTML = `<p style="color:var(--error); grid-column:1/-1">${err.message}</p>`;
+  }
+}
+
+function renderPagination({ page, pages }) {
+  const el = document.getElementById('pagination');
+  el.innerHTML = '';
+  if (pages <= 1) return;
+
+  for (let i = 1; i <= pages; i++) {
+    const btn = document.createElement('button');
+    btn.className = `btn btn-sm ${i === page ? 'btn-primary' : 'btn-secondary'}`;
+    btn.textContent = i;
+    btn.addEventListener('click', () => { currentPage = i; loadProducts(); });
+    el.appendChild(btn);
+  }
+}
+
+async function loadCategoryFilters() {
+  try {
+    const { categories } = await api.get('/products/categories');
+    const list = document.getElementById('category-filter-list');
+    list.innerHTML = '';
+
+    const allItem = document.createElement('div');
+    allItem.className = `filter-chip ${!activeCategory ? 'active' : ''}`;
+    allItem.style.cssText = 'display:block; margin-bottom:6px; border-radius:6px;';
+    allItem.textContent = 'All Categories';
+    allItem.addEventListener('click', () => { activeCategory = null; currentPage = 1; updateCategoryFilters(null); loadProducts(); });
+    list.appendChild(allItem);
+
+    categories.forEach(cat => {
+      const item = document.createElement('div');
+      item.className = `filter-chip ${activeCategory === cat ? 'active' : ''}`;
+      item.style.cssText = 'display:block; margin-bottom:6px; border-radius:6px;';
+      item.textContent = cat;
+      item.dataset.cat = cat;
+      item.addEventListener('click', () => {
+        activeCategory = cat;
+        currentPage = 1;
+        updateCategoryFilters(cat);
+        loadProducts();
+        Tracker.track('click', { category: cat });
+      });
+      list.appendChild(item);
+    });
+  } catch (_) {}
+}
+
+function updateCategoryFilters(active) {
+  document.querySelectorAll('#category-filter-list .filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.cat === active || (!el.dataset.cat && !active));
+  });
+}
+
+function applyFilters() { currentPage = 1; loadProducts(); }
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('min-price').value = '';
+  document.getElementById('max-price').value = '';
+  document.getElementById('sort-by').value = 'trendScore';
+  activeCategory = null;
+  currentPage = 1;
+  updateCategoryFilters(null);
+  loadProducts();
+}
+
+// Init from URL params
+document.getElementById('search-input').value = params.get('q') || '';
+if (params.get('category')) activeCategory = params.get('category');
+if (params.get('sort')) document.getElementById('sort-by').value = params.get('sort');
+
+Tracker.observeSearch(document.getElementById('search-input'));
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
+
+loadCategoryFilters();
+loadProducts();
+</script>
+</body>
+</html>

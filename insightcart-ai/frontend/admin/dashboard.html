@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — InsightCart AI</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .admin-layout { display: flex; min-height: calc(100vh - 64px); }
+    .admin-sidebar { width: 220px; background: var(--bg-2); border-right: 1px solid var(--border); padding: 20px 12px; flex-shrink: 0; }
+    .admin-main { flex: 1; padding: 32px; overflow-y: auto; }
+    .sidebar-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--radius); color:var(--text-2); font-size:14px; cursor:pointer; transition:all var(--transition); margin-bottom:2px; text-decoration:none; }
+    .sidebar-item:hover { background: var(--surface); color: var(--text); }
+    .sidebar-item.active { background: rgba(196,122,58,0.12); color: var(--copper-lt); }
+    .section { display: none; }
+    .section.active { display: block; }
+    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .analytics-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+    .analytics-card-title { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; }
+    .bar { flex: 1; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--copper) 0%, var(--copper-dk) 100%); min-height: 4px; cursor: pointer; position: relative; transition: opacity 0.2s; }
+    .bar:hover { opacity: 0.8; }
+    .bar-tooltip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 11px; white-space: nowrap; pointer-events: none; display: none; z-index: 10; }
+    .bar:hover .bar-tooltip { display: block; }
+    .heatmap-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; }
+    .heatmap-cell { height: 24px; border-radius: 3px; background: var(--surface-2); position: relative; cursor: default; }
+    .funnel-step { margin-bottom: 12px; }
+    .funnel-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--text-2); }
+    .funnel-track { height: 28px; background: var(--bg-3); border-radius: var(--radius); overflow: hidden; }
+    .funnel-fill { height: 100%; border-radius: var(--radius); display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; color: #fff; transition: width 1s ease; }
+    .top-product-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .top-product-row:last-child { border-bottom: none; }
+    .rank-badge { width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); color: var(--text-3); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .rank-badge.gold { background: rgba(245,166,35,0.2); color: var(--amber); }
+    .rank-badge.silver { background: rgba(158,154,168,0.2); color: #9e9aa8; }
+    .rank-badge.bronze { background: rgba(196,122,58,0.2); color: var(--copper); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-brand-icon">🛒</div>
+      <span class="nav-brand-name">Insight<span>Cart</span> AI</span>
+    </a>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="badge badge-copper">⚙️ Admin Panel</span>
+      <a href="/index.html" class="btn btn-ghost btn-sm">← Shop</a>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-label">Analytics</div>
+    <a class="sidebar-item active" onclick="switchSection('overview')">📊 Overview</a>
+    <a class="sidebar-item" onclick="switchSection('behavior')">🧠 Behavior Intel</a>
+
+    <div class="sidebar-label" style="margin-top:16px;">Management</div>
+    <a class="sidebar-item" href="/admin/products.html">📦 Products</a>
+    <a class="sidebar-item" onclick="switchSection('orders')">🛒 Orders</a>
+    <a class="sidebar-item" onclick="switchSection('users')">👥 Users</a>
+
+    <div class="sidebar-label" style="margin-top:16px;">System</div>
+    <a class="sidebar-item" onclick="recomputeTrends()">🔁 Recompute Trends</a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+
+    <!-- Overview Section -->
+    <div id="section-overview" class="section active page-content">
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:24px;">Dashboard Overview</h2>
+
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card skeleton" style="height:90px;"></div>
+        <div class="stat-card skeleton" style="height:90px;"></div>
+        <div class="stat-card skeleton" style="height:90px;"></div>
+        <div class="stat-card skeleton" style="height:90px;"></div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Order Status Breakdown -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">📋 Order Status Breakdown</div>
+          <div id="order-status-bars"></div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">🏆 Top Products by Views</div>
+          <div id="top-products-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Behavior Intelligence Section -->
+    <div id="section-behavior" class="section">
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:24px;">
+        🧠 Behavior Intelligence Engine
+      </h2>
+
+      <div class="analytics-grid" style="margin-bottom:20px;">
+        <!-- Conversion Funnel -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">🔄 Conversion Funnel <span style="font-size:10px; color:var(--text-3)">Last 30 days</span></div>
+          <div id="funnel-chart"></div>
+        </div>
+
+        <!-- Event Distribution -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">📈 Event Distribution <span style="font-size:10px; color:var(--text-3)">Last 7 days</span></div>
+          <div id="event-bars" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Activity Heatmap -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">🕐 Activity by Hour <span style="font-size:10px; color:var(--text-3)">Last 7 days</span></div>
+          <div id="heatmap"></div>
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-3); margin-top:4px;">
+            <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
+          </div>
+        </div>
+
+        <!-- Top Searches -->
+        <div class="analytics-card">
+          <div class="analytics-card-title">🔍 Top Search Queries</div>
+          <div id="top-searches"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div id="section-orders" class="section">
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:24px;">Order Management</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th><th>Customer</th><th>Total</th>
+              <th>Status</th><th>Payment</th><th>Date</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table-body">
+            <tr><td colspan="7" style="text-align:center; color:var(--text-3); padding:32px;">Loading orders...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users Section -->
+    <div id="section-users" class="section">
+      <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:24px;">User Management</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+          </thead>
+          <tbody id="users-table-body">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-3); padding:32px;">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/tracker.js"></script>
+<script src="/js/app.js"></script>
+<script>
+// Guard: admin only
+if (!Auth.isLoggedIn() || !Auth.isAdmin()) {
+  showToast('Admin access required', 'error');
+  window.location.href = '/login.html';
+}
+
+let analyticsData = null;
+
+function switchSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById(`section-${name}`).classList.add('active');
+  event?.target?.classList.add('active');
+
+  if (name === 'behavior' && !analyticsData) loadBehaviorAnalytics();
+  if (name === 'orders') loadOrders();
+  if (name === 'users') loadUsers();
+}
+
+// ── Overview ────────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const { stats } = await api.get('/admin/stats');
+    const grid = document.getElementById('stat-grid');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value">${fmt.currency(stats.totalRevenue)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value">${fmt.number(stats.totalOrders)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Customers</div>
+        <div class="stat-value">${fmt.number(stats.totalUsers)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Order Value</div>
+        <div class="stat-value">${fmt.currency(stats.avgOrderValue)}</div>
+      </div>
+    `;
+
+    // Order status bars
+    const statuses = stats.ordersByStatus || {};
+    const total = Object.values(statuses).reduce((s, v) => s + v, 0) || 1;
+    const colors = { pending: '#f5a623', processing: '#58b9f5', shipped: '#c47a3a', delivered: '#3ecf8e', cancelled: '#e5534b' };
+    const statusEl = document.getElementById('order-status-bars');
+    statusEl.innerHTML = Object.entries(statuses).map(([s, c]) => `
+      <div class="funnel-step">
+        <div class="funnel-label"><span>${s.charAt(0).toUpperCase()+s.slice(1)}</span><span>${c}</span></div>
+        <div class="funnel-track">
+          <div class="funnel-fill" style="width:${(c/total*100).toFixed(1)}%; background:${colors[s]||'#888'}">
+            ${(c/total*100).toFixed(0)}%
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    document.getElementById('stat-grid').innerHTML = `<p style="color:var(--error); grid-column:1/-1">${err.message}</p>`;
+  }
+}
+
+// ── Behavior Analytics ──────────────────────────────────────────────────────────
+async function loadBehaviorAnalytics() {
+  try {
+    const { analytics } = await api.get('/admin/analytics');
+    analyticsData = analytics;
+
+    // Conversion funnel
+    const { views=0, cartAdds=0, purchases=0 } = analytics.conversionFunnel;
+    document.getElementById('funnel-chart').innerHTML = `
+      <div class="funnel-step">
+        <div class="funnel-label"><span>👁 Product Views</span><span>${fmt.number(views)}</span></div>
+        <div class="funnel-track"><div class="funnel-fill" style="width:100%; background:var(--info)">100%</div></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-label"><span>🛒 Added to Cart</span><span>${fmt.number(cartAdds)}</span></div>
+        <div class="funnel-track"><div class="funnel-fill" style="width:${views?Math.min((cartAdds/views*100),100).toFixed(1):0}%; background:var(--copper)">
+          ${views?(cartAdds/views*100).toFixed(1):0}%
+        </div></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-label"><span>✅ Purchased</span><span>${fmt.number(purchases)}</span></div>
+        <div class="funnel-track"><div class="funnel-fill" style="width:${views?Math.min((purchases/views*100),100).toFixed(1):0}%; background:var(--success)">
+          ${views?(purchases/views*100).toFixed(1):0}%
+        </div></div>
+      </div>
+    `;
+
+    // Event distribution
+    const eventEl = document.getElementById('event-bars');
+    const maxCount = Math.max(...(analytics.eventsByType.map(e => e.count)||[1]));
+    eventEl.innerHTML = analytics.eventsByType.slice(0, 8).map(e => `
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); margin-bottom:3px;">
+          <span>${e._id}</span><span>${fmt.number(e.count)}</span>
+        </div>
+        <div style="height:8px; background:var(--bg-3); border-radius:4px; overflow:hidden;">
+          <div style="height:100%; width:${(e.count/maxCount*100).toFixed(0)}%; background:var(--copper); border-radius:4px;"></div>
+        </div>
+      </div>
+    `).join('');
+
+    // Activity heatmap
+    const hourMap = {};
+    analytics.activityByHour.forEach(h => { hourMap[h._id] = h.count; });
+    const maxH = Math.max(...Object.values(hourMap), 1);
+    const heatmap = document.getElementById('heatmap');
+    heatmap.innerHTML = '<div class="heatmap-grid">' +
+      Array.from({length:24}, (_, h) => {
+        const count = hourMap[h] || 0;
+        const intensity = count / maxH;
+        const alpha = (0.1 + intensity * 0.9).toFixed(2);
+        return `<div class="heatmap-cell" style="background: rgba(196,122,58,${alpha});" title="${h}:00 — ${count} events"></div>`;
+      }).join('') + '</div>';
+
+    // Top searches
+    const searchEl = document.getElementById('top-searches');
+    if (analytics.topSearchQueries.length) {
+      searchEl.innerHTML = analytics.topSearchQueries.slice(0,10).map((q, i) => `
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; ${i===9?'border-bottom:none':''}">
+          <span style="color:var(--text-2);">${i+1}. ${q._id}</span>
+          <span class="badge badge-copper">${q.count}</span>
+        </div>
+      `).join('');
+    } else {
+      searchEl.innerHTML = '<p style="color:var(--text-3); font-size:13px;">No search data yet</p>';
+    }
+
+    // Top viewed products
+    if (analytics.topViewedProducts.length) {
+      document.getElementById('top-products-list').innerHTML = analytics.topViewedProducts.slice(0,5).map((p, i) => {
+        const medals = ['gold','silver','bronze'];
+        return `
+          <div class="top-product-row">
+            <div class="rank-badge ${medals[i]||''}">${i+1}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:500; color:var(--text);">${p.name}</div>
+              <div style="font-size:11px; color:var(--text-3);">${p.category}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; color:var(--copper);">👁 ${fmt.number(p.viewCount)}</div>
+              <div style="font-size:11px; color:var(--text-3);">🛒 ${p.cartAddCount} · ✅ ${p.purchaseCount}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+  } catch (err) {
+    console.error('Behavior analytics error:', err.message);
+  }
+}
+
+// ── Orders Management ───────────────────────────────────────────────────────────
+async function loadOrders() {
+  const tbody = document.getElementById('orders-table-body');
+  try {
+    const { orders } = await api.get('/admin/orders');
+    if (!orders.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-3); padding:32px;">No orders found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = orders.map(o => `
+      <tr>
+        <td><code style="font-size:11px;">${o._id.slice(-8).toUpperCase()}</code></td>
+        <td>
+          <div style="font-weight:500; font-size:13px;">${o.userId?.name || 'Unknown'}</div>
+          <div style="font-size:11px; color:var(--text-3);">${o.userId?.email || ''}</div>
+        </td>
+        <td><strong>${fmt.currency(o.total)}</strong></td>
+        <td><span class="badge badge-${o.status==='delivered'?'success':o.status==='cancelled'?'error':'warning'}">${o.status}</span></td>
+        <td><span class="badge badge-${o.paymentStatus==='paid'?'success':o.paymentStatus==='failed'?'error':'neutral'}">${o.paymentStatus}</span></td>
+        <td style="font-size:12px; color:var(--text-3);">${fmt.date(o.createdAt)}</td>
+        <td>
+          <select onchange="updateOrderStatus('${o._id}', this.value)" class="form-input" style="padding:4px 8px; font-size:12px; width:130px;">
+            ${['pending','processing','shipped','delivered','cancelled'].map(s =>
+              `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`
+            ).join('')}
+          </select>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--error); padding:16px;">${err.message}</td></tr>`;
+  }
+}
+
+async function updateOrderStatus(orderId, status) {
+  try {
+    await api.patch(`/orders/${orderId}/status`, { status });
+    showToast(`Order status updated to "${status}"`, 'success');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+// ── Users Management ────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const tbody = document.getElementById('users-table-body');
+  try {
+    const { users } = await api.get('/admin/users');
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong style="font-size:13px;">${u.name}</strong></td>
+        <td style="font-size:12px; color:var(--text-2);">${u.email}</td>
+        <td><span class="badge ${u.role==='admin'?'badge-copper':'badge-neutral'}">${u.role}</span></td>
+        <td><span class="badge ${u.isActive?'badge-success':'badge-error'}">${u.isActive?'Active':'Inactive'}</span></td>
+        <td style="font-size:12px; color:var(--text-3);">${fmt.date(u.createdAt)}</td>
+        <td>
+          <button class="btn btn-sm ${u.isActive?'btn-danger':'btn-secondary'}"
+            onclick="toggleUser('${u._id}', ${!u.isActive})">
+            ${u.isActive ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:var(--error); padding:16px;">${err.message}</td></tr>`;
+  }
+}
+
+async function toggleUser(userId, isActive) {
+  try {
+    await api.patch(`/admin/users/${userId}`, { isActive });
+    showToast(`User ${isActive ? 'activated' : 'deactivated'}`, 'success');
+    loadUsers();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function recomputeTrends() {
+  try {
+    await api.post('/admin/recompute-trends');
+    showToast('Trending scores recomputed successfully! 🔥', 'success');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+// Init
+loadOverview();
+</script>
+</body>
+</html>
